@@ -71,7 +71,7 @@ Run #4 - 18/20
 issues are not scored). State your rubric's decision, the gold label, and the
 reasoning that produced your rubric's result.]
 
-Issue 03 was rejected according to both the gold labels and my rubric. The reason for this is that the last 5 default-branch commits were from 2024, way past the 30-day window that I used in my rubric.
+`issue-03` was rejected according to both the gold labels and my rubric. The reason for this is that the last 5 default-branch commits were from 2024, way past the 30-day window that I used in my rubric.
 
 **Check rationale**
 
