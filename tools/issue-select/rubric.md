@@ -34,8 +34,7 @@ will fail eval issues designed around that family.
 
 | Check | Evidence | Pass condition | Weight |
 |---|---|---|---|
-| maintainer-alive | recent pull requests | pull requests merged in last 30 days | required |
-| commits-alive| recent human commits | last human commit within last 30 days | required |
+| commits-alive| recent human commits | last such commit within last 30 days | required |
 | repo-size | lines of code | between 5k and 50k lines of code | preferred |
 | unclaimed | number of linked PRs | 0 open linked PRs | required |
 | policy-allow-ai | read  README.md or CONTRIBUTING.md | does not explicitly reject AI-generated code | required |
