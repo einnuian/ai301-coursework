@@ -28,6 +28,12 @@ comments upstream are identified by this name.]
 issue page on its own. **Then paste the text of that comment underneath the link** — the
 pasted text is what this field is graded on, so copy across what you actually posted.]
 
+https://github.com/codepath/pathreview-ai301-fa26-s3/issues/35#issuecomment-5903080724
+
+Hi, I'd like to take this one as my Path Review contribution.
+
+The issue asks for a way for clients to register a callback URL and get a `POST` with the review payload once a long multi-repo review (30–90 seconds) finishes. I haven't reproduced anything yet. My next step is to set up the repo from its README, run a multi-repo review, and record how the caller finds out it's done today (polling, blocking, or nothing). I'll post that as a repro report here, with my environment, steps, and output, before I start on `api/routes/webhooks.py` and `core/services/webhook_service.py`.
+
 **Reproduction comment**
 
 [Link to the comment where you posted your reproduction. It must record the environment
@@ -46,11 +52,17 @@ fields.
 only one run occurred. **The last score in your list must match the agreement line in the
 `eval-run.txt` you committed** — that file is the record of your final run.]
 
+Run 1: 20/20
+
+Run 2: 20/20
+
 **Package analysis**
 
 [Pick one scored package (`pkg-01` through `pkg-20` — the four `calib-` packages are never
 scored). Name it by id, say what your rubric decided and what the gold label said, and
 explain why your rubric read it that way.]
+
+`pkg-20`: my rubric said reject, and so did the gold label. All the proof checks passed, but `ai-policy-met` failed. The grader wrote: "Repo facts require disclosure of AI tool and extent of assistance in issues/comments; neither candidate comment contains any AI disclosure." Ghostty's policy says "All AI usage in any form must be disclosed." My check treats every package as AI-assisted, so a good repro still gets rejected if it doesn't disclose.
 
 **Check rationale**
 
@@ -58,12 +70,18 @@ explain why your rubric read it that way.]
 Then say why it reads that way — what you revised to get there, or what you rejected in
 favour of it.]
 
+| ai-policy-met | repo's AI/contribution policy vs. both comments (treat packages as AI-assisted) | if the policy requires AI disclosure in issues or comments, a comment discloses it; otherwise pass (a PR-only disclosure rule does not apply) | required |
+
+This check replaced my old `follows-convention` check ("follows the convention as denoted by the repo"). The old one was too vague to give the same answer every time. I limited the new check to "issues or comments" and added the PR-only exception. That way, a repo like fd, which only asks for disclosure "in the pull request", doesn't fail comments its policy doesn't cover.
+
 **Trade-offs**
 
 [Every check gives something up. Any one of these is a complete answer: a package whose
 result it changes, a canary you re-ran with `--only`, a case you accept it will miss, or a
 stated reason nothing changed elsewhere. "Nothing changed, and here is how I know" earns
 the point in full when the reason follows.]
+
+The PR-only exception is what keeps `pkg-09` accepted. The grader wrote: "the policy states no disclosure ask for issue comments". The case I accept this check will miss is a repo whose AI policy doesn't say whether comments count. My check passes that repo, even if a careful maintainer would want a disclosure. Nothing else changed: both full runs scored 20/20 with "disclosure 1/1". So the stricter check for `pkg-20` didn't flip any accepted package that has an AI policy (`pkg-03`, `pkg-05`, `pkg-07`, `pkg-09`, `pkg-12`).
 
 ---
 
