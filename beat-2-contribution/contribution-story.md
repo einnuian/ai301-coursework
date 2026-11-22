@@ -66,15 +66,13 @@ On 2026-11-22 I wrote four `gh search issues` queries ("llm evaluation", "llm tr
 
 I added five Upstream rules (claims, questions, pings) to my voice guide, moved it to `~/.claude/voice-guard/`, and installed the hook, which stopped the `gh issue comment --help` wiring test as expected; I also built a 40-line `CLAUDE.local.md` in my lasagna clone (excluded through `.git/info/exclude`) from CONTRIBUTING.md and one scoped orientation run over the judge code. The guard stopped my real claim twice: once because my "get to the point in a few sentences" rule clashed with lasagna's requirement that a claim list files, a failing test, and `docker compose` commands, and once because the hook looks for a relative `--body-file` from the session's starting folder, not the folder I'd moved to. So I changed the rule to let the repo's rules win and now post with full paths. In the memory file, I dropped the `@AGENTS.md` import because lasagna's `CLAUDE.md` is a symlink to it, and I marked what's still unverified: the orientation agent couldn't read `pin_openai_client`, and the build and test commands haven't been run, since there's no venv yet.
 
-**Unit 7: [one line on the tool work]**
+**Unit 7: wrote lasagna's ship manifest, tested the ship-gate hook, planned the fix**
 
-[2-4 sentences: the ship-gate and your gate manifest. What it produced
-on your real branch, what fought you, what changed because of it.]
+My `ship-manifest.md` names lasagna's own pre-PR checks: `uvx ruff@0.14.7 check .`, `uvx ruff@0.14.7 format --check .`, and the suite. I ran each from a shell with no virtual environment active on unmodified `main`. Both ruff checks passed, but the suite took about 18 minutes (the gate allows 25 per check) and had 1 failure out of 6,093 (`test_a_recorded_server_is_found_while_it_runs`), which also fails when run alone and tests code my fix doesn't touch. So I moved it to the excluded table with the date and reason, and made the gate's suite command deselect it. The hook test (`gh pr create --help`) got both stops, `ship-gate: STOP. no PR text to check` and the voice guard's. The gate hasn't run on a real branch yet, because I haven't built the fix.
 
-**Unit 8: [one line on the tool work]**
+**Unit 8: wrote my PR-monitor playbook from lasagna's real review timing**
 
-[2-4 sentences: the PR-monitor and your playbook. What it read, what it
-drafted, what you did with the draft.]
+I filled the four playbook sections. The staleness thresholds come from measuring the 8 most recent merged outside PRs: the owner first responded within 0 to 0.4 days on every one, and the longest silence mid-review was about 6 days (#29). That gave me 3 quiet days before a first-review nudge and 8 after I've answered a review. `monitor.py --state` confirmed "all four sections filled in, ready for a full run", but it reported "NO PR YET", so it has read nothing and drafted nothing: there's no draft to send or hold back yet. What fell short is the data: half the sample comes from one contributor, because lasagna has had few outside PRs, so I'll revisit the thresholds once my own PR shows how review goes.
 
 ---
 
@@ -429,65 +427,75 @@ Deviations: none yet.
 
 ## Testing Strategy
 
-[What observable checks prove the fix: your reproduction steps re-run
-against the built change (before and after), and the repo's own test
-suite or checks with the outcome shown. "Tests pass" with nothing
-observable named is not a strategy.]
+The fix isn't built yet, so this is the strategy plus the baseline I've already measured on `main`.
+
+**Baseline on unmodified `main` (104e516), measured 2026-11-22** from a shell with no virtual environment active:
+- `uvx ruff@0.14.7 check .`: "All checks passed!"
+- `uvx ruff@0.14.7 format --check .`: "866 files already formatted"
+- `.venv/bin/pytest tests/ --ignore=tests/live --ignore=tests/stress -q`: 6092 passed, 471 skipped, 1 failed (`test_a_recorded_server_is_found_while_it_runs`, which fails on `main` and alone; excluded in my manifest)
+- The reproduction (`repro_113.py`): `_check_judge_llm` passes, `failed_metrics: ['faithfulness']`.
+
+**What will prove the fix:**
+1. **The new test fails on `main` and passes on the branch.** `tests/test_a_judge_that_answers_with_the_schema_is_caught.py` uses a fake judge over `httpx.MockTransport` that answers the statements request with the schema under `json_object` and with an instance under `json_schema`. Then I revert the fix and see it fail again, as AGENTS.md asks.
+2. **The default request is unchanged.** With the setting unset, the request is still `{"type": "json_object"}`. That's the evidence that an OpenAI judge's scores can't move.
+3. **The reproduction before and after.** `repro_113.py` on `main` and on the branch, with and without `RAG_EVAL_JUDGE_RESPONSE_FORMAT=json_schema`. Expected on the branch: the check refuses the judge under the default, and faithfulness scores under `json_schema`. In my design run, mode `JSON_SCHEMA` scored 0.889 on the same three samples.
+4. **The stack run.** `lasagna benchmark run smoke --profile speed --tracks generation --samples 2` inside the Docker Compose stack, with llama3.2 in an Ollama container, with and without the setting. This also covers context recall and precision under `json_schema`, which nothing has shown yet.
+5. **The manifest's three checks,** run by the ship-gate before the PR opens.
 
 **Toolkit**
 
-- Tool:
-- What it produced:
-- Difficulties:
-- What changed:
+- Tool: the ship manifest, plus Claude Code running its three commands from a shell with no virtual environment active (`env -i`), the way the ship-gate will.
+- What it produced: the baseline above. Ruff passed twice, and the suite reported 6092 passed, 471 skipped, 1 failed, in 18m48s.
+- Difficulties: the one failure on unmodified `main`, and a suite that takes close to the gate's 25-minute limit per check.
+- What changed: I reran the failing test alone to confirm it fails on `main` on its own, recorded it in the manifest's excluded table, and made the gate's suite command deselect it instead of dropping the suite.
 
 ---
 
 ## Implementation Notes
 
-[A running log, added to as you work. Date each entry. What you
-built, decisions you made when you made them, wrong turns included.]
+**2026-11-22: scan and claim**
 
-**[Date]**
+The scout ranked #113 first. My first claim draft ("I'd like to work on this…") was rejected by repro-check, because lasagna requires a plan in the claim. I rewrote it with files, a failing test and `docker compose` commands. The voice guard then stopped it over my "few sentences" rule, so I changed the rule to let repo rules win, and posted. The owner replied: "#113 is yours", plus four pointers, including that #112 had changed the judge code.
 
-[Entry]
+**2026-11-22: environment and reproduction**
 
-**[Date]**
+I created a uv venv with `.[eval]` (ragas 0.4.4) and ran Ollama 0.40.17 in Docker with llama3.2. The reproduction matched the issue. Wrong turns: my request logging caught nothing through httpx (sync or async), and only worked at the openai SDK layer. My first schema-constrained replay contradicted the issue because instructor reuses one `messages` list across retries; copying each request at send time fixed it.
 
-[Entry]
+**2026-11-22: design experiment and plan**
+
+I compared JSON with `JSON_SCHEMA` mode: faithfulness failed vs. scored 0.889. A short statements-shaped probe passed in both modes, so the setup check has to send RAGAS's real prompt. Decision: an opt-in `RAG_EVAL_JUDGE_RESPONSE_FORMAT`, keeping the default request so OpenAI scores can't move. plan-check made me verify the ragas floor (0.4.4 takes `mode`; 0.4.3 doesn't).
+
+**2026-11-22: baseline checks and manifest**
+
+Ruff passed. The suite reported 1 failure on `main`, unrelated to the judge, and I excluded it in the manifest with the reason. No code changed yet: the fix, its test and the stack run are next, and the draft PR is due by 2026-12-06 under lasagna's claim rule.
 
 **Toolkit**
 
-- Tool:
-- What it produced:
-- Difficulties:
-- What changed:
+- Tool: Claude Code in my lasagna clone. It wrote and ran `repro_113.py` and a design-experiment script against llama3.2, and its notes came from `CLAUDE.local.md`.
+- What it produced: the reproduction log, the JSON vs `JSON_SCHEMA` comparison (failed vs 0.889), and the baseline check results.
+- Difficulties: request capture took three tries, and the first replay was wrong in a way that looked like evidence against the issue.
+- What changed: I deep-copy each request when logging it, and I check ragas facts against the version actually installed, not another project's copy.
 
 ---
 
 ## Pull Request
 
-**PR Link:** [GitHub PR URL when opened]
+**PR Link:** not opened yet
 
-**PR Description:** [what the PR says; much of the content above
-adapts into it]
+**PR Description:** not written yet. It will adapt Solution Approach and Testing Strategy into lasagna's PR template: why, what changed, how it was tested (the `docker compose` commands and output), evidence, and "Agent use" (Written with: Claude Code; Read in full by: me).
 
 **Maintainer Feedback:**
 
-- [Date]: [feedback received, or "none yet"; silence is a normal
-  state and costs you nothing]
-- [Date]: [how you addressed it]
+- 2026-11-22: none yet. No PR is open. (On the issue, the owner accepted my claim the same day and pointed me to `test_a_reasoning_judge_can_finish_its_judgement.py` and the #112 changes; both are in my plan.)
 
-**Status:** [Awaiting review / Iterating / Merged / Closed. The
-status is a fact you record, never a grade: the PR is graded as
-opened.]
+**Status:** not opened yet. The fix isn't built. My claim requires a draft PR with its failing test by 2026-12-06.
 
 **Toolkit**
 
-- Tool:
-- What it produced:
-- Difficulties:
-- What changed:
+- Tool: the ship-gate (`~/.claude/ship-gate/check_gate.py`, a PreToolUse hook) and my `ship-manifest.md`.
+- What it produced: on the hook test, `ship-gate: STOP. no PR text to check…`, alongside the voice guard's stop. It hasn't gated a real PR yet.
+- Difficulties: the suite on `main` has one unrelated failure and runs close to the gate's per-check limit. `scripts/ci-local.sh`, which CONTRIBUTING names first, builds every CI job's environment, so I didn't make it a gate.
+- What changed: the failing test is excluded with a dated reason and deselected in the suite command. `ci-local.sh` is listed as excluded with my reason, so pr-precheck can see what I skipped.
 
 ---
 
@@ -495,25 +503,34 @@ opened.]
 
 **Technical Skills Gained**
 
-[What you learned technically, named concretely.]
+- How RAGAS gets structured answers from a judge model: instructor's modes. `Mode.JSON` sends `response_format: {"type": "json_object"}` with the schema only in the prompt; `Mode.JSON_SCHEMA` puts the schema in the request, so the server can constrain the reply. I learned it well enough to show the difference end to end (failed vs 0.889).
+- How instructor retries: it appends each failed reply and the validation error to the same `messages` list, which matters the moment you log or replay requests.
+- Running a local model as a test dependency: Ollama in Docker, pulled by tag, pointed at through an OpenAI-compatible `/v1` URL.
+- Reading a project's test patterns before writing one: lasagna fakes the judge over `httpx.MockTransport`, so a test needs no server.
+- Making checks reproducible: running them with no virtual environment active, pinning tool versions the way CI does (`uvx ruff@0.14.7`), and keeping local files out of a PR with `.git/info/exclude`.
 
 **Challenges Overcome**
 
-[What was hard and how you solved it; point at the real events, the
-Toolkit blocks above are full of them.]
+- **My first claim wouldn't have counted.** Lasagna treats a claim without a plan as a question. repro-check caught it; I rewrote the claim with files, a test and commands, and the owner thanked me for "the clear plan".
+- **My own tool blocked my real post.** The voice guard's "few sentences" rule conflicted with the plan lasagna requires. I changed the rule so the repo's rules win, rather than weakening the claim.
+- **Evidence that pointed the wrong way.** My schema-constrained replay first contradicted the issue. Instead of reporting it, I inspected the request and found my logging had captured it after four retries.
+- **A wrong fact in my own notes.** The orientation agent had read an older ragas from another project, so my notes said the fix direction was impossible. plan-check flagged it, and PyPI and the installed code showed 0.4.4 supports it.
+- **The scout's false accepts.** Two accepted issues were already claimed or already fixed. I patched the rubric, and the re-grade rejects both.
 
 **What I'd Do Differently Next Time**
 
-[Reflection on your process.]
+- Read the target repo's CONTRIBUTING.md before drafting anything I post, not after a tool quotes it at me.
+- Install the project's own environment before trusting any fact about its dependencies.
+- Build the fix sooner. I spent the first day on claim, reproduction and planning, which was the right order, but the deadline (a draft PR by 2026-12-06) now depends on the stack run, the slowest step, so I should start it early.
+- Get a second opinion on my evidence before I believe it. The replay mistake would have gone into a report if I'd trusted the first result.
 
 ---
 
 ## Resources Used
 
-[What actually helped, not a reading list. List things this story
-already shows you using: the doc you followed to set the environment
-up, the thread that explained the bug, the person who answered you.
-One real entry beats ten plausible ones.]
-
-- [Link to documentation that helped]
-- [Discussion, issue, or post that helped]
+- [lasagna CONTRIBUTING.md](https://github.com/dolev31/lasagna/blob/main/CONTRIBUTING.md): the claim rule ("A claim without a plan is a question, not a claim"), setup, the checks in my manifest, the Docker Compose stack steps, and the AI-agents policy.
+- [lasagna AGENTS.md](https://github.com/dolev31/lasagna/blob/main/AGENTS.md): the commands, "a test that passes without the fix is not a test", and the PR rules for agent-assisted work.
+- [Issue #113](https://github.com/dolev31/lasagna/issues/113): the owner's reproduction and "Start here" list, and their reply to my claim (the #112 changes, the test pattern to copy, "the check before answers are written is part of the bug").
+- `tests/test_a_reasoning_judge_can_finish_its_judgement.py` in lasagna: the `httpx.MockTransport` judge pattern my test will follow.
+- [ragas on PyPI](https://pypi.org/project/ragas/): release dates that settled that 0.4.4 (2026-11-14) is the first release whose `llm_factory` takes `mode`.
+- [Ollama Docker image](https://hub.docker.com/r/ollama/ollama): how I ran llama3.2 locally for the reproduction.
