@@ -8,9 +8,13 @@ format criteria grade exactly that. Your course repo link is the whole submissio
 files and no evidence uploads are part of Assignment 5.
 
 **Contribution Number:** 1
-**Student:** Ein
+
+**Student:** Anh Nguyen
+
 **GitHub Username:** einnuian
+
 **Issue:** https://github.com/dolev31/lasagna/issues/113
+
 **Pull Request:** not opened yet
 
 One repository, built across units 5 to 8, telling the whole story of your real
@@ -58,11 +62,9 @@ one in the week it belongs to.
 
 On 2026-11-22 I wrote four `gh search issues` queries ("llm evaluation", "llm tracing", "llm observability", "llm async"), all limited to open, unassigned Python bugs. I added ranking filters and ran a scan: 190 results, top 5 graded. Two of the four accepted issues should have been rejected. wardeniq#167 had a fresh "I'd like to claim this" comment, but `unclaimed` only counted linked PRs. future-agi#1966 already had a merged fix (PR #2202). I widened `unclaimed` to count claim comments from the last 30 days and added a required `not-already-fixed` check, logged in `scan-notes.md`. Also noted: GitHub's secondary rate limit stopped the searches partway through (fixed with a retry and backoff), and the "llm async" query hit its 100-result cap.
 
-**Unit 6: [one line on the tool work]**
+**Unit 6: installed the voice guard, added Upstream rules to my voice guide, built a CLAUDE.local.md for lasagna**
 
-[2-4 sentences: the voice-guard, the repo-memory file. What broke or
-fell short, and what changed because of it. "Nothing broke" counts when
-it is true - say how you know.]
+I added five Upstream rules (claims, questions, pings) to my voice guide, moved it to `~/.claude/voice-guard/`, and installed the hook, which stopped the `gh issue comment --help` wiring test as expected; I also built a 40-line `CLAUDE.local.md` in my lasagna clone (excluded through `.git/info/exclude`) from CONTRIBUTING.md and one scoped orientation run over the judge code. The guard stopped my real claim twice: once because my "get to the point in a few sentences" rule clashed with lasagna's requirement that a claim list files, a failing test, and `docker compose` commands, and once because the hook looks for a relative `--body-file` from the session's starting folder, not the folder I'd moved to. So I changed the rule to let the repo's rules win and now post with full paths. In the memory file, I dropped the `@AGENTS.md` import because lasagna's `CLAUDE.md` is a symlink to it, and I marked what's still unverified: the orientation agent couldn't read `pin_openai_client`, and the build and test commands haven't been run, since there's no venv yet.
 
 **Unit 7: [one line on the tool work]**
 
@@ -82,7 +84,7 @@ I searched GitHub with my scout. Each query traced to my fit profile: Python onl
 
 On the tool itself: the scout found a good issue, but the wild search exposed real gaps. My `unclaimed` check only counted linked PRs, so it accepted an issue someone had claimed in a comment. Nothing checked whether a fix had already been merged. I patched both. Two gaps remain. The ranking can't see star counts, so this 37-star repo got through even though my profile asks for 200 to 10k. And `repo-size` is only an estimate from GitHub's byte counts, which marks lasagna as too big (about 240k lines), probably because data files are counted as Python. I would rank on stars in a later stage, and replace the size estimate with a real line count or drop it.
 
-**Claim comment:** claim pending, 2026-11-22
+**Claim comment:** https://github.com/dolev31/lasagna/issues/113#issuecomment-7085540848 (posted 2026-11-22)
 
 **Toolkit**
 
